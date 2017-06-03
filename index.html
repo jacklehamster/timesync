@@ -1,0 +1,32 @@
+<div id="time"></div>
+
+
+<script src="https://www.gstatic.com/firebasejs/4.1.1/firebase.js"></script>
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyAaxX2V1Le0HEdo6C0ZWyy7QFlgjnkINjs",
+        authDomain: "dobuki.firebaseapp.com",
+        databaseURL: "https://dobuki.firebaseio.com",
+        projectId: "firebase-dobuki",
+        storageBucket: "firebase-dobuki.appspot.com",
+        messagingSenderId: "475686014208"
+    };
+    firebase.initializeApp(config);
+
+
+    var time = firebase.database().ref("time");
+    time.on("value", function(dataSnapshot) {
+        console.log(dataSnapshot.val());
+    });
+
+    var date = new Date();
+    function refreshTime() {
+        var div = document.getElementById("time");
+        date.setTime(Date.now());
+        div.textContent = date.toString() + "|" + date.getMilliseconds();
+        requestAnimationFrame(refreshTime);
+    }
+    refreshTime();
+
+</script>
