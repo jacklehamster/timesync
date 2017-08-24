@@ -1,6 +1,16 @@
-<div id="time"></div>
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+    </head>
+    <body>
+        <div>
+            <div id="time" style="font-size: x-large"></div>
+            <div id="progress" style="background-color: dodgerblue; width: 100%; height:20px"></div>
+        </div>
+    </body>
+</html>
 
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.7.0/js/md5.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/4.1.1/firebase.js"></script>
 <script>
     // Initialize Firebase
@@ -14,17 +24,62 @@
     };
     firebase.initializeApp(config);
 
+    var aloneTimeout = 3000;
 
+    var hiReceived = null;
+    var obj = {};
+    var synchronized = false;
+    var id = "id_"+md5(Math.random() + "" + Date.now());
+    obj[id] = {};
     var time = firebase.database().ref("time");
     time.on("value", function(dataSnapshot) {
-        console.log(dataSnapshot.val());
+        obj = (dataSnapshot.val());
+//        console.log(obj);
+        if(synchronized) {
+            for(var i in obj) {
+                if(i!==id) {
+                    if(!obj[i].hi) {    //  send the current time
+                        time.child(i).child('hi').set(timeNow());
+                    } else if(obj[i].isTime && !obj[i].response) {
+                        time.child(i).child('response').set(
+                            timeNow() - obj[i].isTime
+                        );
+                    }
+                }
+            }
+        } else if(obj && obj[id]) {
+            if(obj[id].response) {
+                synchronized = true;
+                console.log(obj[id].response);
+            } else if(obj[id].hi) {    //  received the current time
+                hiReceived = Date.now();
+                var diff = hiReceived - start;
+                time.child(id).child('isTime').set(obj[id].hi + diff/2);
+            }
+        }
     });
+    var start = Date.now();
+    time.child(id).set({
+        hello:Date.now(),
+    });
+
+    function timeNow() {
+        return Date.now();
+    }
 
     var date = new Date();
     function refreshTime() {
+        var now = Date.now();
+        if(!synchronized && !obj[id].hi &&  now-start>aloneTimeout) {
+            for(var i in obj) {
+                time.child(i).set(null);
+            }
+            synchronized = true;
+        }
         var div = document.getElementById("time");
-        date.setTime(Date.now());
-        div.textContent = date.toString() + "|" + date.getMilliseconds();
+        date.setTime(now);
+        div.textContent = date.toString();
+        document.getElementById('progress').style.width = (date.getMilliseconds()/10) + '%';
         requestAnimationFrame(refreshTime);
     }
     refreshTime();
